@@ -27,7 +27,7 @@ function App() {
             setMetadata(data)
         } catch (err) {
             console.error(err)
-            // Silent fail on blur
+            // Silent fail on blur unless it's a manual download click
         } finally {
             setLoading(false)
         }
@@ -76,7 +76,7 @@ function App() {
                         Media<span className="text-indigo-600">Fetch</span>
                     </h1>
                     <p className="text-slate-500 text-lg max-w-md mx-auto">
-                        The professional way to download media. High quality, zero compression.
+                        High-quality media downloads from YouTube, TikTok, Instagram, and more.
                     </p>
                 </div>
 
@@ -92,7 +92,7 @@ function App() {
                                 </div>
                                 <input
                                     type="url"
-                                    placeholder="https://youtube.com/watch?v=..."
+                                    placeholder="Paste video URL from TikTok, YouTube or Instagram..."
                                     className="input-field pl-12"
                                     value={url}
                                     onChange={(e) => setUrl(e.target.value)}
@@ -105,7 +105,12 @@ function App() {
                         {metadata && (
                             <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex items-start gap-4 animate-in fade-in slide-in-from-top-2">
                                 {metadata.thumbnail && (
-                                    <img src={metadata.thumbnail} alt="Thumbnail" className="w-20 h-20 object-cover rounded-lg shadow-sm" />
+                                    <img
+                                        src={metadata.thumbnail}
+                                        alt="Thumbnail"
+                                        className="w-20 h-20 object-cover rounded-lg shadow-sm"
+                                        referrerPolicy="no-referrer"
+                                    />
                                 )}
                                 <div className="flex-1 min-w-0 py-1">
                                     <h3 className="font-semibold text-slate-900 truncate leading-tight">{metadata.title}</h3>

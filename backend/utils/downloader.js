@@ -2,66 +2,68 @@ const ytDlp = require('yt-dlp-exec');
 const path = require('path');
 const fs = require('fs');
 const ffmpegPath = require('ffmpeg-static');
+const { spawn } = require('child_process');
 
 const binaryPath = path.resolve(__dirname, '../yt-dlp.exe');
 
 const downloadMedia = async (url, format, res) => {
     try {
         console.log(`Starting download for: ${url} [${format}]`);
-        console.log(`Using binary at: ${binaryPath}`);
-        console.log(`Using ffmpeg at: ${ffmpegPath}`);
 
         // Get metadata first
         const metadata = await ytDlp(url, {
             dumpJson: true,
             noWarnings: true,
+            ffmpegLocation: ffmpegPath,
         }, { ytDlpBinary: binaryPath });
 
-        const title = metadata.title.replace(/[^\w\s-]/gi, '').trim() || 'video';
+        if (!metadata || !metadata.title) {
+            throw new Error('Could not find media content for this link.');
+        }
+
+        const title = metadata.title.replace(/[^\w\s-]/gi, '').trim() || 'audio';
         const filename = `${title}.${format === 'mp3' ? 'mp3' : 'mp4'}`;
 
-        // Set headers for download
         res.header('Content-Disposition', `attachment; filename="${filename}"`);
         res.header('Content-Type', format === 'mp3' ? 'audio/mpeg' : 'video/mp4');
 
-        // Flags for yt-dlp
-        const flags = {
-            noCheckCertificates: true,
-            noWarnings: true,
-            preferFreeFormats: true,
-            quiet: true, // IMPORTANT: Suppress progress to stdout
-            ffmpegLocation: ffmpegPath, // Use local ffmpeg binary
-            output: '-', // Output to stdout
-        };
-
         if (format === 'mp3') {
-            flags.extractAudio = true;
-            flags.audioFormat = 'mp3';
-            flags.format = 'bestaudio/best';
+            const ytProcess = spawn(binaryPath, [
+                url,
+                '-f', 'bestaudio/best',
+                '--no-check-certificates',
+                '--no-warnings',
+                '-o', '-'
+            ]);
+
+            const ffmpegProcess = spawn(ffmpegPath, [
+                '-i', 'pipe:0',
+                '-f', 'mp3',
+                '-acodec', 'libmp3lame',
+                '-ab', '192k',
+                'pipe:1'
+            ]);
+
+            ytProcess.stdout.pipe(ffmpegProcess.stdin);
+            ffmpegProcess.stdout.pipe(res);
+
+            res.on('close', () => {
+                ytProcess.kill();
+                ffmpegProcess.kill();
+            });
+
         } else {
-            // With ffmpeg available, we can safely request bestvideo+bestaudio and merge
-            flags.format = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best';
+            const ytProcess = spawn(binaryPath, [
+                url,
+                '-f', 'best[ext=mp4]/best',
+                '--no-check-certificates',
+                '--no-warnings',
+                '-o', '-'
+            ]);
+
+            ytProcess.stdout.pipe(res);
+            res.on('close', () => ytProcess.kill());
         }
-
-        // Process execution
-        const subprocess = ytDlp.exec(url, flags, { ytDlpBinary: binaryPath });
-
-        // Pipe stdout to response
-        subprocess.stdout.pipe(res);
-
-        subprocess.stderr.on('data', (data) => {
-            // Log errors but don't send to client (unless it's a fatal error logic)
-            console.error(`yt-dlp stderr: ${data}`);
-        });
-
-        subprocess.on('close', (code) => {
-            console.log(`yt-dlp process exited with code ${code}`);
-            if (code !== 0) {
-                if (!res.headersSent) {
-                    res.status(500).json({ error: 'Download failed' });
-                }
-            }
-        });
 
     } catch (error) {
         console.error('Download error:', error);
@@ -77,15 +79,25 @@ const getInfo = async (url) => {
             dumpJson: true,
             noWarnings: true,
         }, { ytDlpBinary: binaryPath });
+
+        if (!metadata || !metadata.title) {
+            throw new Error('Media details not found');
+        }
+
+        let thumb = metadata.thumbnail;
+        if (metadata.thumbnails && metadata.thumbnails.length > 0) {
+            thumb = metadata.thumbnails[metadata.thumbnails.length - 1].url;
+        }
+
         return {
             title: metadata.title,
-            thumbnail: metadata.thumbnail,
-            duration: metadata.duration_string,
-            platform: metadata.extractor_key
+            thumbnail: thumb,
+            duration: metadata.duration_string || (metadata.duration ? `${Math.floor(metadata.duration / 60)}:${String(Math.floor(metadata.duration % 60)).padStart(2, '0')}` : 'N/A'),
+            platform: metadata.extractor_key ? metadata.extractor_key.charAt(0).toUpperCase() + metadata.extractor_key.slice(1) : 'Video'
         };
     } catch (error) {
         console.error('GetInfo error:', error);
-        throw new Error('Failed to get video info');
+        throw new Error('This platform is not supported or link is invalid.');
     }
 };
 
