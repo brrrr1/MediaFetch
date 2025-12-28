@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Download, Link2, Loader2, CheckCircle, AlertCircle, Music, Video, Zap, Shield, Sparkles } from 'lucide-react'
+import { Download, Link2, Loader2, CheckCircle, AlertCircle, Music, Video, Zap, Shield, Sparkles, Clipboard } from 'lucide-react'
 
 const THEMES = {
     DEFAULT: {
@@ -58,6 +58,18 @@ function App() {
     const [activeTheme, setActiveTheme] = useState('DEFAULT')
     const rotationIndex = useRef(0)
     const abortControllerRef = useRef(null)
+
+    const handlePaste = async () => {
+        try {
+            const text = await navigator.clipboard.readText()
+            if (text) {
+                setUrl(text)
+                // fetchInfo se disparará automáticamente por el useEffect de [url]
+            }
+        } catch (err) {
+            console.error('Failed to read clipboard:', err)
+        }
+    }
 
     // Apply theme to document root
     useEffect(() => {
@@ -234,7 +246,7 @@ function App() {
                                 <input
                                     type="url"
                                     placeholder="Paste URL..."
-                                    className="input-field pl-14 py-4 text-base shadow-sm"
+                                    className="input-field pl-14 pr-24 py-4 text-base shadow-sm"
                                     value={url}
                                     onChange={(e) => {
                                         const val = e.target.value;
@@ -250,6 +262,14 @@ function App() {
                                     }}
                                     required
                                 />
+                                <button
+                                    type="button"
+                                    onClick={handlePaste}
+                                    className="absolute inset-y-2 right-2 px-4 bg-brand/10 hover:bg-brand text-brand hover:text-white rounded-xl transition-all flex items-center gap-2 group/paste"
+                                >
+                                    <Clipboard className="w-4 h-4 transition-transform group-hover/paste:scale-110" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest">Paste</span>
+                                </button>
                             </div>
                         </div>
 
