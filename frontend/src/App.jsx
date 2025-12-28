@@ -57,6 +57,7 @@ function App() {
     const [format, setFormat] = useState('mp4')
     const [activeTheme, setActiveTheme] = useState('DEFAULT')
     const rotationIndex = useRef(0)
+    const abortControllerRef = useRef(null)
 
     // Apply theme to document root
     useEffect(() => {
@@ -105,6 +106,16 @@ function App() {
     const fetchInfo = async (targetUrl) => {
         const urlToFetch = targetUrl || url
         if (!urlToFetch) return
+
+        // Cancel previous request if exists
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort()
+        }
+
+        // Create new controller
+        const controller = new AbortController()
+        abortControllerRef.current = controller
+
         setLoading(true)
         setError('')
         setMetadata(null)
@@ -113,7 +124,8 @@ function App() {
             const res = await fetch('/api/info', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url: urlToFetch })
+                body: JSON.stringify({ url: urlToFetch }),
+                signal: controller.signal
             })
 
             const data = await res.json()
@@ -121,11 +133,16 @@ function App() {
 
             setMetadata(data)
         } catch (err) {
+            if (err.name === 'AbortError') {
+                console.log('Fetch aborted')
+                return
+            }
             console.error(err)
-            // Solo mostramos error si el URL parece completo
             if (urlToFetch.length > 15) setError(err.message)
         } finally {
-            setLoading(false)
+            if (!controller.signal.aborted) {
+                setLoading(false)
+            }
         }
     }
 
@@ -225,6 +242,10 @@ function App() {
                                         if (!val) {
                                             setMetadata(null);
                                             setError('');
+                                            setLoading(false);
+                                            if (abortControllerRef.current) {
+                                                abortControllerRef.current.abort();
+                                            }
                                         }
                                     }}
                                     required
