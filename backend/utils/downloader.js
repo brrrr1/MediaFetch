@@ -1,27 +1,28 @@
 const ytDlp = require('yt-dlp-exec');
 const path = require('path');
 const fs = require('fs');
-const ffmpegPath = require('ffmpeg-static');
 const { spawn } = require('child_process');
 
-const binaryPath = null;
+// En Docker/Linux, 'ffmpeg' está en el PATH y yt-dlp se instala globalmente o se maneja por el wrapper
+const ffmpegPath = 'ffmpeg';
+const binaryPath = 'yt-dlp'; // Usar el comando global en Linux
 
 const downloadMedia = async (url, format, res) => {
     try {
         console.log(`Starting download for: ${url} [${format}]`);
 
-        // Get metadata first
+        // Obtener metadatos
         const metadata = await ytDlp(url, {
             dumpJson: true,
             noWarnings: true,
             ffmpegLocation: ffmpegPath,
-        }, { ytDlpBinary: binaryPath });
+        });
 
         if (!metadata || !metadata.title) {
             throw new Error('Could not find media content for this link.');
         }
 
-        const title = metadata.title.replace(/[^\w\s-]/gi, '').trim() || 'audio';
+        const title = metadata.title.replace(/[^\w\s-]/gi, '').trim() || 'media';
         const filename = `${title}.${format === 'mp3' ? 'mp3' : 'mp4'}`;
 
         res.header('Content-Disposition', `attachment; filename="${filename}"`);
@@ -47,6 +48,9 @@ const downloadMedia = async (url, format, res) => {
             ytProcess.stdout.pipe(ffmpegProcess.stdin);
             ffmpegProcess.stdout.pipe(res);
 
+            ytProcess.on('error', (err) => console.error('yt-dlp error:', err));
+            ffmpegProcess.on('error', (err) => console.error('FFmpeg error:', err));
+
             res.on('close', () => {
                 ytProcess.kill();
                 ffmpegProcess.kill();
@@ -62,6 +66,7 @@ const downloadMedia = async (url, format, res) => {
             ]);
 
             ytProcess.stdout.pipe(res);
+            ytProcess.on('error', (err) => console.error('yt-dlp video error:', err));
             res.on('close', () => ytProcess.kill());
         }
 
@@ -78,7 +83,7 @@ const getInfo = async (url) => {
         const metadata = await ytDlp(url, {
             dumpJson: true,
             noWarnings: true,
-        }, { ytDlpBinary: binaryPath });
+        });
 
         if (!metadata || !metadata.title) {
             throw new Error('Media details not found');
