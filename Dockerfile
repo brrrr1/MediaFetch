@@ -10,12 +10,18 @@ RUN cd frontend && npm run build
 FROM node:20-slim
 WORKDIR /app
 
-# Instalar dependencias del sistema (Python y FFmpeg)
+# Instalar dependencias del sistema
+# Instalamos pip3 para poder bajar yt-dlp de forma fiable
 RUN apt-get update && apt-get install -y \
     python3 \
+    python3-pip \
     ffmpeg \
+    ca-certificates \
     && ln -s /usr/bin/python3 /usr/bin/python \
     && rm -rf /var/lib/apt/lists/*
+
+# Instalar yt-dlp vía pip
+RUN pip3 install --break-system-packages yt-dlp
 
 # Instalar dependencias del backend
 COPY backend/package*.json ./backend/

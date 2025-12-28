@@ -1,26 +1,18 @@
 const ytDlp = require('yt-dlp-exec');
-const path = require('path');
-const fs = require('fs');
 const { spawn } = require('child_process');
 
-// En Docker/Linux, 'ffmpeg' está en el PATH y yt-dlp se instala globalmente o se maneja por el wrapper
 const ffmpegPath = 'ffmpeg';
-const binaryPath = 'yt-dlp'; // Usar el comando global en Linux
+const binaryPath = 'yt-dlp';
 
 const downloadMedia = async (url, format, res) => {
     try {
-        console.log(`Starting download for: ${url} [${format}]`);
+        console.log(`[DOWNLOAD] Initiating: ${url} (${format})`);
 
-        // Obtener metadatos
+        // Obtener metadatos para el nombre del archivo
         const metadata = await ytDlp(url, {
             dumpJson: true,
             noWarnings: true,
-            ffmpegLocation: ffmpegPath,
         });
-
-        if (!metadata || !metadata.title) {
-            throw new Error('Could not find media content for this link.');
-        }
 
         const title = metadata.title.replace(/[^\w\s-]/gi, '').trim() || 'media';
         const filename = `${title}.${format === 'mp3' ? 'mp3' : 'mp4'}`;
@@ -29,6 +21,7 @@ const downloadMedia = async (url, format, res) => {
         res.header('Content-Type', format === 'mp3' ? 'audio/mpeg' : 'video/mp4');
 
         if (format === 'mp3') {
+            console.log(`[MP3] Spawning yt-dlp + ffmpeg pipeline`);
             const ytProcess = spawn(binaryPath, [
                 url,
                 '-f', 'bestaudio/best',
@@ -48,15 +41,18 @@ const downloadMedia = async (url, format, res) => {
             ytProcess.stdout.pipe(ffmpegProcess.stdin);
             ffmpegProcess.stdout.pipe(res);
 
-            ytProcess.on('error', (err) => console.error('yt-dlp error:', err));
-            ffmpegProcess.on('error', (err) => console.error('FFmpeg error:', err));
+            ytProcess.stderr.on('data', (d) => console.log(`[yt-dlp stderr]: ${d}`));
+            ffmpegProcess.stderr.on('data', (d) => console.log(`[ffmpeg stderr]: ${d}`));
 
             res.on('close', () => {
+                console.log(`[MP3] Client closed connection, killing processes`);
                 ytProcess.kill();
                 ffmpegProcess.kill();
             });
 
         } else {
+            console.log(`[MP4] Spawning yt-dlp direct stream`);
+            // Nota: Para streaming directo por stdout, usamos 'best' para evitar problemas de merging
             const ytProcess = spawn(binaryPath, [
                 url,
                 '-f', 'best[ext=mp4]/best',
@@ -66,14 +62,19 @@ const downloadMedia = async (url, format, res) => {
             ]);
 
             ytProcess.stdout.pipe(res);
-            ytProcess.on('error', (err) => console.error('yt-dlp video error:', err));
-            res.on('close', () => ytProcess.kill());
+
+            ytProcess.stderr.on('data', (d) => console.log(`[yt-dlp stderr]: ${d}`));
+
+            res.on('close', () => {
+                console.log(`[MP4] Client closed connection, killing process`);
+                ytProcess.kill();
+            });
         }
 
     } catch (error) {
-        console.error('Download error:', error);
+        console.error('[DOWNLOAD ERROR]:', error);
         if (!res.headersSent) {
-            res.status(500).json({ error: error.message });
+            res.status(500).json({ error: 'Failed to process download. Please try again.' });
         }
     }
 };
@@ -84,10 +85,6 @@ const getInfo = async (url) => {
             dumpJson: true,
             noWarnings: true,
         });
-
-        if (!metadata || !metadata.title) {
-            throw new Error('Media details not found');
-        }
 
         let thumb = metadata.thumbnail;
         if (metadata.thumbnails && metadata.thumbnails.length > 0) {
@@ -101,8 +98,8 @@ const getInfo = async (url) => {
             platform: metadata.extractor_key ? metadata.extractor_key.charAt(0).toUpperCase() + metadata.extractor_key.slice(1) : 'Video'
         };
     } catch (error) {
-        console.error('GetInfo error:', error);
-        throw new Error('This platform is not supported or link is invalid.');
+        console.error('[INFO ERROR]:', error);
+        throw new Error('Invalid URL or platform not supported');
     }
 };
 
