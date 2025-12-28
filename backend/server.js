@@ -42,11 +42,24 @@ app.get('/api/download', async (req, res, next) => {
     }
 });
 
+// Serve static files from the frontend/dist folder
+app.use(express.static(path.join(__dirname, '../frontend/dist')));
+
 // Global Error Handler
 app.use((err, req, res, next) => {
     console.error('Unhandled Error:', err);
     if (!res.headersSent) {
         res.status(500).json({ error: err.message || 'Internal Server Error' });
+    }
+});
+
+// Catch-all route to serve the frontend for any non-API requests (must be LAST)
+app.get('*', (req, res) => {
+    const indexPath = path.join(__dirname, '../frontend/dist', 'index.html');
+    if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+    } else {
+        res.status(404).send('Frontend not built yet. Please run build.');
     }
 });
 

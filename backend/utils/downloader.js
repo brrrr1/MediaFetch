@@ -4,7 +4,7 @@ const fs = require('fs');
 const ffmpegPath = require('ffmpeg-static');
 const { spawn } = require('child_process');
 
-const binaryPath = path.resolve(__dirname, '../yt-dlp.exe');
+const binaryPath = null;
 
 const downloadMedia = async (url, format, res) => {
     try {
