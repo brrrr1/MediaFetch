@@ -1,5 +1,53 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Download, Link2, Loader2, CheckCircle, AlertCircle, Music, Video, Zap, Shield, Sparkles } from 'lucide-react'
+
+const THEMES = {
+    DEFAULT: {
+        primary: '#4f46e5',
+        bg: '#f8fafc',
+        text: '#0f172a',
+        card: '#ffffff',
+        border: 'rgba(0, 0, 0, 0.05)',
+        input: '#ffffff',
+        gradient: 'none'
+    },
+    YOUTUBE: {
+        primary: '#FF0000',
+        bg: '#0F0F0F',
+        text: '#ffffff',
+        card: '#1A1A1A',
+        border: 'rgba(255, 255, 255, 0.05)',
+        input: '#242424',
+        gradient: 'none'
+    },
+    TWITTER: {
+        primary: '#1DA1F2',
+        bg: '#000000',
+        text: '#ffffff',
+        card: '#121212',
+        border: 'rgba(255, 255, 255, 0.1)',
+        input: '#1A1A1A',
+        gradient: 'none'
+    },
+    INSTAGRAM: {
+        primary: '#bc1888',
+        bg: '#ffffff',
+        text: '#0f172a',
+        card: '#ffffff',
+        border: 'rgba(0, 0, 0, 0.05)',
+        input: '#f9fafb',
+        gradient: 'linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)'
+    },
+    TIKTOK: {
+        primary: '#25F4EE',
+        bg: '#010101',
+        text: '#ffffff',
+        card: '#121212',
+        border: 'rgba(255, 255, 255, 0.08)',
+        input: '#1A1A1A',
+        gradient: 'linear-gradient(90deg, #FE2C55 0%, #25F4EE 100%)'
+    }
+}
 
 function App() {
     const [url, setUrl] = useState('')
@@ -7,6 +55,52 @@ function App() {
     const [error, setError] = useState('')
     const [metadata, setMetadata] = useState(null)
     const [format, setFormat] = useState('mp4')
+    const [activeTheme, setActiveTheme] = useState('DEFAULT')
+    const rotationIndex = useRef(0)
+
+    // Apply theme to document root
+    useEffect(() => {
+        const theme = THEMES[activeTheme] || THEMES.DEFAULT
+        const root = document.documentElement
+        root.style.setProperty('--brand-primary', theme.primary)
+        root.style.setProperty('--brand-bg', theme.bg)
+        root.style.setProperty('--brand-text', theme.text)
+        root.style.setProperty('--brand-card', theme.card)
+        root.style.setProperty('--brand-border', theme.border)
+        root.style.setProperty('--brand-input', theme.input)
+        root.style.setProperty('--brand-gradient', theme.gradient)
+    }, [activeTheme])
+
+    // Detect platform from URL
+    useEffect(() => {
+        if (!url) return
+
+        const lowerUrl = url.toLowerCase()
+        if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
+            setActiveTheme('YOUTUBE')
+        } else if (lowerUrl.includes('twitter.com') || lowerUrl.includes('x.com')) {
+            setActiveTheme('TWITTER')
+        } else if (lowerUrl.includes('instagram.com')) {
+            setActiveTheme('INSTAGRAM')
+        } else if (lowerUrl.includes('tiktok.com')) {
+            setActiveTheme('TIKTOK')
+        } else {
+            setActiveTheme('DEFAULT')
+        }
+    }, [url])
+
+    // Rotate themes when idle
+    useEffect(() => {
+        if (url) return
+
+        const themes = Object.keys(THEMES)
+        const interval = setInterval(() => {
+            rotationIndex.current = (rotationIndex.current + 1) % themes.length
+            setActiveTheme(themes[rotationIndex.current])
+        }, 5000)
+
+        return () => clearInterval(interval)
+    }, [url])
 
     const fetchInfo = async () => {
         if (!url) return
@@ -27,7 +121,6 @@ function App() {
             setMetadata(data)
         } catch (err) {
             console.error(err)
-            // Silent fail on blur unless it's a manual download click
         } finally {
             setLoading(false)
         }
@@ -55,45 +148,53 @@ function App() {
             }
         }
 
-        window.location.href = `/api/download?url=${encodeURIComponent(url)}&format=${format}&t=${Date.now()}`
+        const downloadUrl = `/api/download?url=${encodeURIComponent(url)}&format=${format}&t=${Date.now()}`
+        window.location.href = downloadUrl
         setLoading(false)
     }
 
-    return (
-        <div className="min-h-screen flex flex-col items-center justify-center p-6 lg:p-12 relative overflow-hidden bg-slate-50">
-            {/* Abstract Background Decoration */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-indigo-50/50 rounded-full blur-3xl -z-10 opacity-60"></div>
+    const currentThemeData = THEMES[activeTheme] || THEMES.DEFAULT
 
-            <main className="w-full max-w-xl relative z-10 space-y-8">
+    return (
+        <div className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden transition-all duration-1000">
+
+            {/* Liquid Background Glow */}
+            <div
+                className="absolute top-1/2 left-1/2 w-[100vw] h-[80vh] rounded-full blur-[160px] -z-10 animate-glow transition-all duration-[1200ms] ease-in-out"
+                style={{
+                    background: currentThemeData.gradient !== 'none' ? currentThemeData.gradient : currentThemeData.primary,
+                    backgroundColor: currentThemeData.primary
+                }}
+            ></div>
+
+            <main className="w-full max-w-xl relative z-10 space-y-6 md:space-y-8">
 
                 {/* Header Section */}
-                <div className="text-center space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                    <div className="inline-flex items-center justify-center p-2 bg-white border border-slate-200 rounded-full shadow-sm mb-4">
-                        <span className="flex h-2 w-2 rounded-full bg-indigo-500 mr-2"></span>
-                        <span className="text-xs font-medium text-slate-600 tracking-wide uppercase">Universal Downloader</span>
-                    </div>
-                    <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900">
-                        Media<span className="text-indigo-600">Fetch</span>
+                <div className="text-center space-y-2 animate-in fade-in slide-in-from-bottom-4 duration-[1000ms]">
+                    <h1 className="text-5xl md:text-6xl font-black tracking-tighter">
+                        Media<span className="text-brand">Fetch</span>
                     </h1>
-                    <p className="text-slate-500 text-lg max-w-md mx-auto">
-                        High-quality media downloads from YouTube, TikTok, Instagram, and more.
+                    <p className="opacity-50 text-sm md:text-base max-w-xs mx-auto font-medium leading-relaxed">
+                        High-quality media preservation.
                     </p>
                 </div>
 
                 {/* Main Card */}
-                <div className="card-panel p-8 space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100 bg-white border border-slate-200 shadow-xl rounded-2xl">
+                <div className="card-panel p-6 md:p-8 space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-[1000ms] delay-200">
 
                     <form onSubmit={handleDownload} className="space-y-6">
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-700 ml-1">Media URL</label>
+                        <div className="space-y-3">
+                            <div className="px-1">
+                                <label className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40">Source URL</label>
+                            </div>
                             <div className="relative group">
-                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-indigo-600 transition-colors">
+                                <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none opacity-20 group-focus-within:opacity-100 group-focus-within:text-brand transition-all duration-500">
                                     <Link2 className="w-5 h-5" />
                                 </div>
                                 <input
                                     type="url"
-                                    placeholder="Paste video URL from TikTok, YouTube or Instagram..."
-                                    className="input-field pl-12"
+                                    placeholder="Paste URL..."
+                                    className="input-field pl-14 py-4 text-base shadow-sm"
                                     value={url}
                                     onChange={(e) => setUrl(e.target.value)}
                                     onBlur={fetchInfo}
@@ -103,43 +204,45 @@ function App() {
                         </div>
 
                         {metadata && (
-                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex items-start gap-4 animate-in fade-in slide-in-from-top-2">
+                            <div className="bg-brand/5 backdrop-blur-md p-4 rounded-3xl border border-brand/10 flex items-center gap-4 animate-in slide-in-from-right-8 duration-700">
                                 {metadata.thumbnail && (
                                     <img
                                         src={metadata.thumbnail}
                                         alt="Thumbnail"
-                                        className="w-20 h-20 object-cover rounded-lg shadow-sm"
+                                        className="w-16 h-16 object-cover rounded-2xl shadow-xl"
                                         referrerPolicy="no-referrer"
                                     />
                                 )}
-                                <div className="flex-1 min-w-0 py-1">
-                                    <h3 className="font-semibold text-slate-900 truncate leading-tight">{metadata.title}</h3>
-                                    <div className="flex items-center gap-3 text-xs text-slate-500 mt-2">
-                                        <span className="bg-white border border-slate-200 px-2 py-0.5 rounded-md capitalize font-medium">{metadata.platform}</span>
-                                        <span>{metadata.duration}</span>
+                                <div className="flex-1 min-w-0">
+                                    <h3 className="font-black truncate text-base leading-tight mb-1">{metadata.title}</h3>
+                                    <div className="flex items-center gap-2">
+                                        <span className="bg-brand text-white px-2 py-1 rounded-full text-[9px] font-black uppercase tracking-wider shadow-lg shadow-brand/20 transition-all duration-700">
+                                            {metadata.platform}
+                                        </span>
+                                        <span className="text-[9px] font-bold opacity-30 uppercase tracking-widest">{metadata.duration}</span>
                                     </div>
                                 </div>
                             </div>
                         )}
 
                         <div className="space-y-3">
-                            <label className="text-sm font-medium text-slate-700 ml-1">Output Format</label>
+                            <label className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 px-1">Output Format</label>
                             <div className="grid grid-cols-2 gap-4">
                                 <button
                                     type="button"
                                     onClick={() => setFormat('mp4')}
-                                    className={`btn-secondary flex items-center justify-center gap-2 ${format === 'mp4' ? 'active' : ''}`}
+                                    className={`btn-secondary h-14 flex items-center justify-center gap-2.5 group ${format === 'mp4' ? 'active shadow-xl' : ''}`}
                                 >
-                                    <Video className={`w-4 h-4 ${format === 'mp4' ? 'text-indigo-600' : 'text-slate-400'}`} />
-                                    <span>MP4 Video</span>
+                                    <Video className={`w-4 h-4 transition-all duration-700 ${format === 'mp4' ? 'scale-110' : 'opacity-40'}`} />
+                                    <span className="font-black text-[10px] uppercase tracking-widest">Video</span>
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setFormat('mp3')}
-                                    className={`btn-secondary flex items-center justify-center gap-2 ${format === 'mp3' ? 'active' : ''}`}
+                                    className={`btn-secondary h-14 flex items-center justify-center gap-2.5 group ${format === 'mp3' ? 'active shadow-xl' : ''}`}
                                 >
-                                    <Music className={`w-4 h-4 ${format === 'mp3' ? 'text-indigo-600' : 'text-slate-400'}`} />
-                                    <span>MP3 Audio</span>
+                                    <Music className={`w-4 h-4 transition-all duration-700 ${format === 'mp3' ? 'scale-110' : 'opacity-40'}`} />
+                                    <span className="font-black text-[10px] uppercase tracking-widest">Audio</span>
                                 </button>
                             </div>
                         </div>
@@ -147,51 +250,31 @@ function App() {
                         <button
                             type="submit"
                             disabled={loading || !url}
-                            className="w-full btn-primary h-14 text-lg flex items-center justify-center gap-2.5 group hover:shadow-lg hover:shadow-indigo-500/30"
+                            className="w-full btn-primary h-16 text-lg font-black uppercase tracking-[0.15em] flex items-center justify-center gap-3.5 group shadow-xl hover:-translate-y-0.5 transition-all"
                         >
                             {loading ? (
                                 <>
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                    <span>Processing...</span>
+                                    <Loader2 className="w-6 h-6 animate-spin" />
+                                    <span>Loading...</span>
                                 </>
                             ) : (
                                 <>
-                                    <Download className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                                    <span>Download Media</span>
+                                    <Download className="w-6 h-6 group-hover:rotate-12 group-hover:scale-110 transition-transform duration-500" />
+                                    <span>Download</span>
                                 </>
                             )}
                         </button>
                     </form>
 
                     {error && (
-                        <div className="p-4 bg-red-50 border border-red-100/50 rounded-xl flex items-start gap-3 text-red-600 text-sm animate-in fade-in slide-in-from-top-2">
-                            <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                            <p className="leading-relaxed">{error}</p>
+                        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-4 text-red-500 text-[10px] font-black uppercase tracking-widest animate-in fade-in zoom-in-95">
+                            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                            <p>{error}</p>
                         </div>
                     )}
                 </div>
 
-                {/* Features / Footer */}
-                <div className="grid grid-cols-3 gap-4 text-center px-4">
-                    <div className="flex flex-col items-center gap-2 text-slate-400">
-                        <Zap className="w-5 h-5" />
-                        <span className="text-xs font-medium">Lightning Fast</span>
-                    </div>
-                    <div className="flex flex-col items-center gap-2 text-slate-400">
-                        <Shield className="w-5 h-5" />
-                        <span className="text-xs font-medium">Secure & Safe</span>
-                    </div>
-                    <div className="flex flex-col items-center gap-2 text-slate-400">
-                        <Sparkles className="w-5 h-5" />
-                        <span className="text-xs font-medium">Best Quality</span>
-                    </div>
-                </div>
-
             </main>
-
-            <footer className="absolute bottom-6 text-slate-400 text-sm z-10 font-medium tracking-tight">
-                © {new Date().getFullYear()} MediaFetch Inc.
-            </footer>
         </div>
     )
 }

@@ -4,45 +4,98 @@
 
 @layer base {
   :root {
-    --background: 255 255 255;
-    /* White */
-    --foreground: 15 23 42;
-    /* Slate 900 */
-    --primary: 79 70 229;
-    /* Indigo 600 */
-    --primary-foreground: 255 255 255;
-    --secondary: 241 245 249;
-    /* Slate 100 */
-    --secondary-foreground: 51 65 85;
-    /* Slate 700 */
-    --border: 226 232 240;
-    /* Slate 200 */
-    --radius: 0.75rem;
+    --brand-primary: #4f46e5;
+    --brand-bg: #f8fafc;
+    --brand-text: #0f172a;
+    --brand-card: #ffffff;
+    --brand-border: rgba(0, 0, 0, 0.1);
+    --brand-input: #ffffff;
+    --brand-gradient: none;
   }
 
   body {
-    @apply bg-slate-50 text-slate-900 antialiased font-sans selection:bg-indigo-100 selection:text-indigo-700;
+    background-color: var(--brand-bg);
+    color: var(--brand-text);
+    transition: background-color 1200ms ease-in-out, color 1200ms ease-in-out;
+    @apply antialiased font-sans;
+  }
+
+  ::selection {
+    background-color: var(--brand-primary);
+    color: white;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply relative overflow-hidden bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-xl transition-all duration-200 shadow-sm hover:shadow-indigo-500/25 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98];
+    background-color: var(--brand-primary);
+    background-image: var(--brand-gradient);
+    transition: background-color 1200ms ease-in-out, background-image 1200ms ease-in-out, transform 0.2s ease, box-shadow 0.2s ease;
+    @apply relative overflow-hidden text-white font-medium py-3 px-6 rounded-xl shadow-sm disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98];
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    @apply shadow-lg filter brightness-110;
   }
 
   .btn-secondary {
-    @apply bg-white border border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50 font-medium py-3 px-6 rounded-xl transition-all duration-200 active:scale-[0.98];
+    border: 1px solid var(--brand-border);
+    transition: border-color 1200ms ease-in-out, background-color 0.2s ease, color 1200ms ease-in-out, transform 0.2s ease;
+    @apply bg-transparent text-current font-medium py-3 px-6 rounded-xl active:scale-[0.98];
   }
 
   .btn-secondary.active {
-    @apply border-indigo-600 text-indigo-600 bg-indigo-50/50 ring-1 ring-indigo-600/20;
+    border-color: var(--brand-primary);
+    color: var(--brand-primary);
+    background-color: color-mix(in srgb, var(--brand-primary), transparent 90%);
   }
 
   .input-field {
-    @apply w-full bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-indigo-600/20 focus:border-indigo-600 transition-all duration-200;
+    background-color: var(--brand-input);
+    color: var(--brand-text);
+    border: 1px solid var(--brand-border);
+    transition: border-color 1200ms ease-in-out, background-color 1200ms ease-in-out, color 1200ms ease-in-out, box-shadow 0.2s ease;
+    @apply w-full rounded-xl px-4 py-3.5 outline-none;
+  }
+
+  .input-field:focus {
+    @apply ring-2;
+    border-color: var(--brand-primary);
+    --tw-ring-color: color-mix(in srgb, var(--brand-primary), transparent 85%);
   }
 
   .card-panel {
-    @apply bg-white border border-slate-200 rounded-3xl shadow-xl;
+    background-color: var(--brand-card);
+    border: 1px solid var(--brand-border);
+    transition: background-color 1200ms ease-in-out, border-color 1200ms ease-in-out;
+    @apply rounded-[2.5rem] shadow-2xl;
+  }
+
+  .text-brand {
+    color: var(--brand-primary);
+    transition: color 1200ms ease-in-out;
+  }
+
+  .bg-brand {
+    background-color: var(--brand-primary);
+    transition: background-color 1200ms ease-in-out;
+  }
+}
+
+.animate-glow {
+  animation: pulse-glow 4s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.2;
+  }
+
+  50% {
+    transform: translate(-50%, -55%) scale(1.1);
+    opacity: 0.3;
   }
 }
