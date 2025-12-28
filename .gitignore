@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Environment variables
+.env
+.env.*
+
+# Production build
+dist/
+build/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+._*
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+*.log
+
+# Project specific binaries (don't commit large binaries)
+*.exe
+backend/yt-dlp.exe
