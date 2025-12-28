@@ -227,7 +227,8 @@ function App() {
                         Media<span className="text-brand">Fetch</span>
                     </h1>
                     <p className="opacity-50 text-sm md:text-base max-w-xs mx-auto font-medium leading-relaxed">
-                        High-quality media preservation.
+
+                        Universal social media downloader.
                     </p>
                 </div>
 
