@@ -102,8 +102,9 @@ function App() {
         return () => clearInterval(interval)
     }, [url])
 
-    const fetchInfo = async () => {
-        if (!url) return
+    const fetchInfo = async (targetUrl) => {
+        const urlToFetch = targetUrl || url
+        if (!urlToFetch) return
         setLoading(true)
         setError('')
         setMetadata(null)
@@ -112,7 +113,7 @@ function App() {
             const res = await fetch('/api/info', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url })
+                body: JSON.stringify({ url: urlToFetch })
             })
 
             const data = await res.json()
@@ -121,10 +122,32 @@ function App() {
             setMetadata(data)
         } catch (err) {
             console.error(err)
+            // Solo mostramos error si el URL parece completo
+            if (urlToFetch.length > 15) setError(err.message)
         } finally {
             setLoading(false)
         }
     }
+
+    // Auto-fetch info when URL changes (Debounced)
+    useEffect(() => {
+        if (!url) return
+
+        const lowerUrl = url.toLowerCase()
+        const isPlatformUrl = lowerUrl.includes('youtube.com') ||
+            lowerUrl.includes('youtu.be') ||
+            lowerUrl.includes('instagram.com') ||
+            lowerUrl.includes('tiktok.com') ||
+            lowerUrl.includes('twitter.com') ||
+            lowerUrl.includes('x.com')
+
+        if (isPlatformUrl || (url.startsWith('http') && url.length > 15)) {
+            const timer = setTimeout(() => {
+                fetchInfo(url)
+            }, 800)
+            return () => clearTimeout(timer)
+        }
+    }, [url])
 
     const handleDownload = async (e) => {
         e.preventDefault()
@@ -196,8 +219,14 @@ function App() {
                                     placeholder="Paste URL..."
                                     className="input-field pl-14 py-4 text-base shadow-sm"
                                     value={url}
-                                    onChange={(e) => setUrl(e.target.value)}
-                                    onBlur={fetchInfo}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        setUrl(val);
+                                        if (!val) {
+                                            setMetadata(null);
+                                            setError('');
+                                        }
+                                    }}
                                     required
                                 />
                             </div>
@@ -249,8 +278,8 @@ function App() {
 
                         <button
                             type="submit"
-                            disabled={loading || !url}
-                            className="w-full btn-primary h-16 text-lg font-black uppercase tracking-[0.15em] flex items-center justify-center gap-3.5 group shadow-xl hover:-translate-y-0.5 transition-all"
+                            disabled={loading || !url || !metadata}
+                            className="w-full btn-primary h-16 text-lg font-black uppercase tracking-[0.15em] flex items-center justify-center gap-3.5 group shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-30 disabled:grayscale disabled:pointer-events-none"
                         >
                             {loading ? (
                                 <>
