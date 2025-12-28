@@ -1,12 +1,5 @@
 [phases.setup]
-nixPkgs = ["nodejs_20", "python3", "ffmpeg"]
-
-[phases.install]
-# Creamos un enlace simbólico de python3 a python para que los scripts de instalación no fallen
-cmds = [
-  "mkdir -p /usr/local/bin && ln -s /usr/bin/python3 /usr/local/bin/python || true",
-  "npm install"
-]
+nixPkgs = ["python3", "ffmpeg", "nodejs-20_x"]
 
 [phases.build]
 cmds = ["npm run postinstall"]
